@@ -1,0 +1,53 @@
+module Test.ArchiveChoiceTest where
+
+import Daml.Script
+import DA.Optional
+import Loan
+import LoanRequest
+
+testArchiveChoices : Script ()
+testArchiveChoices = script do
+    -- Initialize parties
+    borrower <- allocatePartyWithHint "Borrower" (PartyIdHint "borrower")
+    bank <- allocatePartyWithHint "Bank" (PartyIdHint "bank")
+
+    -- **Test Archive on LoanRequest by borrower**
+    -- Borrower creates a LoanRequest contract
+    loanRequestCid <- submit borrower do
+        createCmd LoanRequest with
+            borrower = borrower
+            bank = bank
+            amount = 1000.0
+
+    -- Borrower exercises Archive choice on LoanRequest
+    submit borrower do
+        exerciseCmd loanRequestCid Archive
+
+    -- Verify that the LoanRequest contract is archived
+    mLoanRequestArchived <- queryContractId @LoanRequest borrower loanRequestCid
+    assertMsg "LoanRequest should be archived after borrower archives it" (isNone mLoanRequestArchived)
+
+    -- **Test Archive on Loan by both borrower and bank**
+    -- Create a new LoanRequest and approve it by bank
+    loanRequestCid2 <- submit borrower do
+        createCmd LoanRequest with
+            borrower = borrower
+            bank = bank
+            amount = 1000.0
+    loanCid <- submit bank do
+        exerciseCmd loanRequestCid2 ApproveRequest
+
+    -- Both borrower and bank exercise Archive choice on Loan
+    submitMulti [borrower, bank] [] $ exerciseCmd loanCid Archive
+
+
+    -- Verify that the Loan contract is archived
+    mLoanArchived <- queryContractId @Loan borrower loanCid
+    assertMsg "Loan should be archived after borrower and bank archive it" (isNone mLoanArchived)
+
+    -- **Attempt to Archive by an unauthorized party**
+    thirdParty <- allocatePartyWithHint "ThirdParty" (PartyIdHint "thirdParty")
+    submitMustFail thirdParty do
+        exerciseCmd loanCid Archive
+
+    return ()
