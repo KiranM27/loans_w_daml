@@ -1,0 +1,30 @@
+-- Loan template represents the loan agreement
+module LoanWithDisbursement where
+
+import TokenAccount
+
+template LoanWithDisbursement
+  with
+    borrower : Party
+    bank : Party
+    amount : Decimal
+    disbursedAmount : Decimal
+  where
+    signatory borrower, bank
+
+    -- Choice to disburse tokens to the borrower's account
+    nonconsuming choice Disburse : ContractId TokenAccount
+      with
+        tokenAccountCid : ContractId TokenAccount
+        disburseAmount : Decimal
+      controller borrower, bank
+      do
+        assertMsg "Disbursement amount must be positive" (disburseAmount > 0.0)
+        let newDisbursedAmount = disbursedAmount + disburseAmount
+        assertMsg "Cannot disburse more than approved loan amount" (newDisbursedAmount <= amount)
+        
+        -- Update the contract
+        create this with disbursedAmount = newDisbursedAmount
+
+        -- Credit tokens to the borrower's account
+        exercise tokenAccountCid Credit with amount = disburseAmount

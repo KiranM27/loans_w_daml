@@ -1,0 +1,30 @@
+-- TokenAccount template represents the token balance of a party
+module TokenAccount where
+
+template TokenAccount
+  with
+    owner : Party
+    issuer : Party
+    balance : Decimal
+  where
+    signatory owner
+    observer issuer
+
+    -- Choice to credit tokens to the account
+    nonconsuming choice Credit : ContractId TokenAccount
+      with
+        amount : Decimal
+      controller issuer
+      do
+        assertMsg "Credit amount must be positive" (amount > 0.0)
+        create this with balance = balance + amount
+
+    -- Choice to debit tokens from the account
+    nonconsuming choice Debit : ContractId TokenAccount
+      with
+        amount : Decimal
+      controller owner
+      do
+        assertMsg "Insufficient balance" (balance >= amount)
+        assertMsg "Debit amount must be positive" (amount > 0.0)
+        create this with balance = balance - amount
