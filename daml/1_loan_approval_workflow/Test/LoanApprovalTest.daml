@@ -1,0 +1,34 @@
+module Test.LoanApprovalTest where
+
+import Daml.Script
+import DA.Optional
+import Loan
+import LoanRequest
+
+testLoanWorkflow : Script ()
+testLoanWorkflow = script do
+    -- Initialize parties
+    borrower <- allocatePartyWithHint "Borrower" (PartyIdHint "borrower")
+    bank <- allocatePartyWithHint "Bank" (PartyIdHint "bank")
+
+    -- a) The borrower creates a LoanRequest contract
+    loanRequestCid <- submit borrower do
+        createCmd LoanRequest with
+            borrower = borrower
+            bank = bank
+            amount = 1000.0
+
+    -- b) The bank approves the LoanRequest using the ApproveRequest choice
+    loanCid <- submit bank do
+        exerciseCmd loanRequestCid ApproveRequest
+
+    -- c) Verify that the LoanRequest contract is archived
+    -- Attempt to query the LoanRequest contract; expect None since it's archived
+    mLoanRequest <- queryContractId @LoanRequest borrower loanRequestCid
+    assertMsg "LoanRequest should be archived" (isNone mLoanRequest)
+
+    -- d) Verify that a new Loan contract is created with correct details
+    loan <- fromSomeNote "Loan contract not found" <$> queryContractId @Loan borrower loanCid
+    assertMsg "Borrower should be correct" (loan.borrower == borrower)
+    assertMsg "Bank should be correct" (loan.bank == bank)
+    assertMsg "Amount should be correct" (loan.amount == 1000.0)

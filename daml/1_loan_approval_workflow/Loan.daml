@@ -1,0 +1,11 @@
+module Loan where
+
+-- Template for Loan
+template Loan
+  with
+    borrower : Party
+    bank : Party
+    amount : Decimal
+  where
+    -- Both the borrower and the bank are signatories to the loan agreement
+    signatory borrower, bank

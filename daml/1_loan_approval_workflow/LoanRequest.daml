@@ -1,0 +1,27 @@
+module LoanRequest where
+
+-- Import the Loan module
+import Loan
+
+-- Template for LoanRequest
+template LoanRequest
+  with
+    borrower : Party
+    bank : Party
+    amount : Decimal
+  where
+    -- The borrower is the signatory who initiates the loan request
+    signatory borrower
+
+    -- The bank is an observer who can see the loan request
+    observer bank
+
+    -- Choice for the bank to approve the loan request
+    choice ApproveRequest : ContractId Loan
+      controller bank
+      do
+        -- Upon approval, create a new Loan contract
+        create Loan with
+          borrower = borrower
+          bank = bank
+          amount = amount
