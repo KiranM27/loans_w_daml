@@ -1,0 +1,42 @@
+module Test.LoanRequestTest where
+
+import Daml.Script
+import LoanLimit
+import LoanRequestWithLoanLimit
+import LoanWithDisbursement
+
+testCreateAndApproveLoanRequestWithUpdatedReturn : Script ()
+testCreateAndApproveLoanRequestWithUpdatedReturn = script do
+    -- Allocate parties
+    borrower <- allocatePartyWithHint "Borrower" (PartyIdHint "borrower")
+    bank <- allocatePartyWithHint "Bank" (PartyIdHint "bank")
+
+    -- Create a LoanLimit contract
+    loanLimitCid <- submit bank do
+        createCmd LoanLimit with
+            bank = bank
+            totalLimit = 10000.0
+            usedAmount = 0.0
+
+    -- Borrower creates a LoanRequest
+    loanRequestCid <- submit borrower do
+        createCmd LoanRequestWithLoanLimit with
+            borrower = borrower
+            bank = bank
+            amount = 5000.0
+
+    -- Bank approves the LoanRequest, returns (loanCid, updatedLoanLimitCid)
+    (loanCid, updatedLoanLimitCid) <- submit bank do
+        exerciseCmd loanRequestCid ApproveRequest with
+            loanLimitCid = loanLimitCid
+
+    -- Verify that the LoanLimit is updated
+    Some loanLimitUpdated <- queryContractId @LoanLimit bank updatedLoanLimitCid
+    assertMsg "Used amount should be 5000" (loanLimitUpdated.usedAmount == 5000.0)
+
+    -- Verify the creation of the LoanWithDisbursement contract
+    Some loanWithDisbursement <- queryContractId @LoanWithDisbursement borrower loanCid
+    assertMsg "Loan amount should be 5000" (loanWithDisbursement.amount == 5000.0)
+    assertMsg "Disbursed amount should be 0" (loanWithDisbursement.disbursedAmount == 0.0)
+
+    return ()

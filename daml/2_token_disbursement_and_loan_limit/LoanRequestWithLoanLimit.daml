@@ -14,7 +14,7 @@ template LoanRequestWithLoanLimit
     observer bank
 
     -- Choice for the bank to approve the loan request
-    choice ApproveRequest : ContractId LoanWithDisbursement
+    choice ApproveRequest : (ContractId LoanWithDisbursement, ContractId LoanLimit)
       with
         loanLimitCid : ContractId LoanLimit
       controller bank
@@ -27,11 +27,13 @@ template LoanRequestWithLoanLimit
         assertMsg "Loan limit exceeded" (newUsedAmount <= loanLimit.totalLimit)
 
         -- Update the LoanLimit used amount
-        exercise loanLimitCid UpdateUsedAmount with amountToAdd = amount
+        updatedLoanLimitCid <- exercise loanLimitCid UpdateUsedAmount with amountToAdd = amount
 
         -- Create the Loan contract
-        create LoanWithDisbursement with
+        loanCid <- create LoanWithDisbursement with
           borrower = borrower
           bank = bank
           amount = amount
           disbursedAmount = 0.0
+
+        return (loanCid, updatedLoanLimitCid)
