@@ -66,7 +66,7 @@ template LoanWithRepayment
         return (updatedLoanCid, updatedTokenAccountCid)
 
     -- Choice for the bank to update the repayment restriction
-    choice UpdateRepaymentRestriction : ContractId RepaymentRestriction
+    choice UpdateRepaymentRestriction : ContractId LoanWithRepayment
       with
         repaymentRestrictionCid : ContractId RepaymentRestriction
       controller bank
