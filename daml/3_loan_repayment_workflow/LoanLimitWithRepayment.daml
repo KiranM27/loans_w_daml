@@ -1,0 +1,29 @@
+module LoanLimitWithRepayment where
+
+template LoanLimitWithRepayment
+  with
+    bank : Party
+    totalLimit : Decimal
+    usedAmount : Decimal
+  where
+    signatory bank
+
+    -- Choice to increase the used loan amount
+    choice UpdateUsedAmount : ContractId LoanLimitWithRepayment
+      with
+        amountToAdd : Decimal
+      controller bank
+      do
+        let newUsedAmount = usedAmount + amountToAdd
+        assertMsg "Loan limit exceeded" (newUsedAmount <= totalLimit)
+        create this with usedAmount = newUsedAmount
+
+    -- Choice to decrease the used loan amount
+    choice UpdateUsedAmountReduce : ContractId LoanLimitWithRepayment
+      with
+        amountToReduce : Decimal
+      controller bank
+      do
+        let newUsedAmount = usedAmount - amountToReduce
+        assertMsg "Used amount cannot be negative" (newUsedAmount >= 0.0)
+        create this with usedAmount = newUsedAmount

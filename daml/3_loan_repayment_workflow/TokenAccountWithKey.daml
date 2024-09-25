@@ -1,0 +1,32 @@
+module TokenAccountWithKey where
+
+template TokenAccountWithKey
+  with
+    owner : Party
+    issuer : Party
+    balance : Decimal
+  where
+    signatory owner
+    observer issuer
+
+    key (owner, issuer) : (Party, Party)
+    maintainer key._1
+
+    -- Choice to credit tokens to the account
+    nonconsuming choice Credit : ContractId TokenAccountWithKey
+      with
+        amount : Decimal
+      controller issuer
+      do
+        assertMsg "Credit amount must be positive" (amount > 0.0)
+        create this with balance = balance + amount
+
+    -- Choice to debit tokens from the account
+    nonconsuming choice Debit : ContractId TokenAccountWithKey
+      with
+        amount : Decimal
+      controller owner
+      do
+        assertMsg "Debit amount must be positive" (amount > 0.0)
+        assertMsg "Insufficient balance" (balance >= amount)
+        create this with balance = balance - amount

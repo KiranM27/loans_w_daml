@@ -1,0 +1,8 @@
+module RepaymentRestriction where
+
+template RepaymentRestriction
+  with
+    bank : Party
+    minRepaymentAmount : Decimal
+  where
+    signatory bank

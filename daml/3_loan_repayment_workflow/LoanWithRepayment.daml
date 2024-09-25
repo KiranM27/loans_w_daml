@@ -1,0 +1,87 @@
+-- Loan template represents the loan agreement
+module LoanWithRepayment where
+
+import RepaymentRestriction
+import TokenAccountWithKey
+import LoanLimitWithRepayment
+
+template LoanWithRepayment
+  with
+    borrower : Party
+    bank : Party
+    amount : Decimal
+    disbursedAmount : Decimal
+    repaidAmount : Decimal
+  where
+    signatory borrower, bank
+
+    -- Choice to disburse tokens to the borrower's account
+    nonconsuming choice Disburse : (ContractId LoanWithRepayment, ContractId TokenAccountWithKey)
+      with
+        tokenAccountCid : ContractId TokenAccountWithKey
+        disburseAmount : Decimal
+      controller borrower, bank
+      do
+        assertMsg "Disbursement amount must be positive" (disburseAmount > 0.0)
+        let newDisbursedAmount = disbursedAmount + disburseAmount
+        assertMsg "Cannot disburse more than approved loan amount" (newDisbursedAmount <= amount)
+
+        -- Update the contract 
+        updatedLoanCid <- create this with disbursedAmount = newDisbursedAmount
+
+        -- Credit tokens to the borrower's account
+        updatedTokenAccountCid <- exercise tokenAccountCid Credit with amount = disburseAmount
+
+        return (updatedLoanCid, updatedTokenAccountCid)
+
+    -- Choice for the borrower to repay the loan
+    nonconsuming choice Repay : (ContractId LoanWithRepayment, ContractId TokenAccountWithKey)
+      with
+        repaymentRestrictionCid : ContractId RepaymentRestriction
+        tokenAccountCid : ContractId TokenAccountWithKey
+        repaymentAmount : Decimal
+      controller borrower
+      do
+        assertMsg "Repayment amount must be positive" (repaymentAmount > 0.0)
+
+        -- Fetch the RepaymentRestriction contract
+        repaymentRestriction <- fetch repaymentRestrictionCid
+
+        -- Ensure the repayment amount meets the minimum requirement
+        assertMsg "Repayment amount is less than minimum required" (repaymentAmount >= repaymentRestriction.minRepaymentAmount)
+
+        -- Ensure the borrower has sufficient tokens to repay
+        tokenAccount <- fetch tokenAccountCid
+        assertMsg "Insufficient token balance for repayment" (tokenAccount.balance >= repaymentAmount)
+
+        let newRepaidAmount = repaidAmount + repaymentAmount
+        assertMsg "Total repaid amount cannot exceed disbursed amount" (newRepaidAmount <= disbursedAmount)
+
+        -- Debit tokens from the borrower's account
+        updatedTokenAccountCid <- exercise tokenAccountCid Debit with amount = repaymentAmount
+
+        -- Update the repaid amount in the Loan contract
+        updatedLoanCid <- create this with repaidAmount = newRepaidAmount
+
+        return (updatedLoanCid, updatedTokenAccountCid)
+
+    -- Choice for the bank to archive the Loan contract when fully repaid
+    choice CloseLoan : () 
+      with
+        loanLimitCid : ContractId LoanLimitWithRepayment
+      controller bank
+      do
+        assertMsg "Loan is not fully repaid" (repaidAmount == disbursedAmount)
+
+        -- Fetch the LoanLimit contract
+        loanLimit <- fetch loanLimitCid
+
+        -- Update the usedAmount in LoanLimit
+        let newUsedAmount = loanLimit.usedAmount - amount
+        assertMsg "Used amount cannot be negative" (newUsedAmount >= 0.0)
+
+        -- Update the LoanLimit contract
+        exercise loanLimitCid UpdateUsedAmountReduce with amountToReduce = amount
+
+        -- Archive the Loan contract
+        return ()
