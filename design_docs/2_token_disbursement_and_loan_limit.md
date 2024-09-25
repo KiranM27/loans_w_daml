@@ -77,6 +77,22 @@
    - **Disburse**: This choice allows either the bank or the borrower to disburse tokens to the borrower’s account after the loan approval. The disbursement is capped by the approved loan amount, ensuring that no more than the agreed amount can be disbursed. The disbursement also updates the borrower’s `TokenAccount` by crediting tokens to their balance.
 
 
-## Conclusion
+## Design Decisions
 
 This design extends the original loan approval system by introducing a loan limit and token disbursement mechanism. It ensures that loan requests are validated against the bank's predefined loan limits and that tokens are disbursed within the approved loan amount. By separating concerns into multiple templates (loan request, loan, token account, and loan limit), the design provides a clear and secure workflow.
+
+
+## TokenAccount Model
+
+- The `TokenAccount` uses an **account balances model**, allowing the owner to hold a balance of tokens.
+- The account is **not archived** when a loan is closed. This enables the account holder to retain any extra funds and use the same account for different loans in the future.
+
+### Credit and Debit Mechanisms
+
+- The **Credit** method requires the **issuer** to act as the controller. This restriction ensures that tokens cannot be minted arbitrarily by the owner, maintaining the integrity of the token supply.
+- The **Debit** method is controlled by the **owner**, granting them the autonomy to use their tokens as needed, provided they comply with the account’s balance constraints.
+
+## Loan Disbursement
+
+- Upon loan approval, **no tokens are transferred** immediately. This design choice ensures the separation of loan approval and fund disbursement processes.
+- The **Disburse** method must be explicitly called by either the bank or the borrower to transfer the required funds, aligning with the approved loan terms. This ensures the borrower receives the correct amount at the appropriate time.

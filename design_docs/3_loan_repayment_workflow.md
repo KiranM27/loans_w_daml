@@ -64,6 +64,11 @@
    - **UpdateUsedAmount**: This choice allows the bank to update the used loan amount after a loan approval or repayment.
 
 
-## Conclusion
+## Design Decisions 
 
 This design adds loan repayment functionality to the existing loan approval and disbursement workflow. It ensures that borrowers can make incremental repayments while adhering to the minimum repayment amount set by the bank. The loan repayment workflow is tightly integrated with the loan limit system, ensuring that the loan contract can be archived once the loan is fully repaid. The repayment restriction gives control to the bank, ensuring that repayment terms are strictly enforced.
+
+- The **minimum repayment amount** is set to **10% of the loan amount**.
+- The **repayment restriction** is enforced by setting the repayment restriction contract ID in the loan contract. 
+- The **repayment restriction contract ID** in the loan contract can **only be changed by the bank**, ensuring that the bank controls the minimum repayment amount while the borrower cannot alter it.
+- Once the loan is **closed**, the **used amount** from the loan limit is **released**, allowing it to be reused for future loan requests.

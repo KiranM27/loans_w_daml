@@ -67,3 +67,8 @@ Detailed design documents are available for each part of the workflow. You can a
 - **Loan Approval Workflow**: [Loan Approval Design Document](./design_docs/1_loan_approval_flow.md)
 - **Loan Disbursement Workflow**: [Loan Disbursement Design Document](./design_docs/2_token_disbursement_and_loan_limit.md)
 - **Loan Repayment Workflow**: [Loan Repayment Design Document](./design_docs/3_loan_repayment_workflow.md)
+
+## 5. Next Steps
+
+- Interest Calcuation - Add interest calculations to the loan amount and adjust repayment amounts accordingly
+- Repayment Schedule - Add a repayment schedule to the loan contract
