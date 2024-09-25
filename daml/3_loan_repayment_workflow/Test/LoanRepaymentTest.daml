@@ -1,10 +1,6 @@
 module Test.LoanRepaymentTest where
 
 import Daml.Script
-import DA.Assert
-import DA.Date 
-import DA.Time 
-import DA.Optional
 
 import LoanRequestWithLoanLimit
 import LoanWithRepayment

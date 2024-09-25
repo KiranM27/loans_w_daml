@@ -9,9 +9,6 @@ template TokenAccountWithKey
     signatory owner
     observer issuer
 
-    key (owner, issuer) : (Party, Party)
-    maintainer key._1
-
     -- Choice to credit tokens to the account
     nonconsuming choice Credit : ContractId TokenAccountWithKey
       with
