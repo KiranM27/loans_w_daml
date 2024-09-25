@@ -7,11 +7,10 @@ template TokenAccount
     issuer : Party
     balance : Decimal
   where
-    signatory owner
-    observer issuer
+    signatory owner, issuer
 
     -- Choice to credit tokens to the account
-    nonconsuming choice Credit : ContractId TokenAccount
+    choice Credit : ContractId TokenAccount
       with
         amount : Decimal
       controller issuer
@@ -20,7 +19,7 @@ template TokenAccount
         create this with balance = balance + amount
 
     -- Choice to debit tokens from the account
-    nonconsuming choice Debit : ContractId TokenAccount
+    choice Debit : ContractId TokenAccount
       with
         amount : Decimal
       controller owner

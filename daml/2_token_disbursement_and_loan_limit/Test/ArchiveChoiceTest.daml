@@ -21,7 +21,7 @@ testArchival = script do
             usedAmount = 0.0
 
     -- 2. Borrower creates a TokenAccount
-    tokenAccountCid <- submit borrower do
+    tokenAccountCid <- submitMulti [borrower, bank] [] do
         createCmd TokenAccount with
             owner = borrower
             issuer = bank
@@ -59,7 +59,7 @@ testArchival = script do
         exerciseCmd updatedLoanLimitCid Archive
 
     -- 7. Archive the TokenAccount contract
-    submit borrower do
+    submitMulti [borrower, bank] [] $ do
         exerciseCmd tokenAccountCid Archive
 
 

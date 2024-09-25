@@ -13,7 +13,7 @@ testDisburseTokens = script do
     bank <- allocatePartyWithHint "Bank" (PartyIdHint "bank")
 
     -- Create a TokenAccount for the borrower
-    tokenAccountCid <- submit borrower do
+    tokenAccountCid <- submitMulti [borrower, bank] [] do
         createCmd TokenAccount with
             owner = borrower
             issuer = bank
