@@ -1,0 +1,40 @@
+-- LoanRequest template represents a borrower's loan application
+module LoanRequestWithLoanLimit where
+
+import LoanWithRepayment
+import LoanLimitWithRepayment
+
+template LoanRequestWithLoanLimit
+  with
+    borrower : Party
+    bank : Party
+    amount : Decimal
+  where
+    signatory borrower
+    observer bank
+
+    -- Choice for the bank to approve the loan request
+    choice ApproveRequest : (ContractId LoanWithRepayment, ContractId LoanLimitWithRepayment)
+      with
+        loanLimitCid : ContractId LoanLimitWithRepayment
+      controller bank
+      do
+        -- Fetch the LoanLimit contract
+        loanLimit <- fetch loanLimitCid
+
+        -- Ensure the new loan does not exceed the bank's loan limit
+        let newUsedAmount = loanLimit.usedAmount + amount
+        assertMsg "Loan limit exceeded" (newUsedAmount <= loanLimit.totalLimit)
+
+        -- Update the LoanLimit used amount
+        updatedLoanLimitCid <- exercise loanLimitCid UpdateUsedAmount with amountToAdd = amount
+
+        -- Create the Loan contract
+        loanCid <- create LoanWithRepayment with
+          borrower = borrower
+          bank = bank
+          amount = amount
+          disbursedAmount = 0.0
+          repaidAmount = 0.0
+
+        return (loanCid, updatedLoanLimitCid)

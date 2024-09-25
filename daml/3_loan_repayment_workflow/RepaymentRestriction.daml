@@ -3,6 +3,8 @@ module RepaymentRestriction where
 template RepaymentRestriction
   with
     bank : Party
+    borrower : Party
     minRepaymentAmount : Decimal
   where
     signatory bank
+    observer borrower
