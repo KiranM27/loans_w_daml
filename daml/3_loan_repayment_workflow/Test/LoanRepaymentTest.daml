@@ -1,6 +1,7 @@
 module Test.LoanRepaymentTest where
 
 import Daml.Script
+import DA.Optional
 
 import LoanRequestWithLoanLimit
 import LoanWithRepayment
@@ -76,5 +77,16 @@ testLoanRepaymentWorkflow = script do
   assertMsg "Total repaid should be 2000" (loan.repaidAmount == 2000.0)
   assertMsg "Disbursed amount should be 2000" (loan.disbursedAmount == 2000.0)
   assertMsg "Repaid amount should be the same as the disbursed amount" (loan.repaidAmount == loan.disbursedAmount)
+
+
+  -- Bank closes the loan 
+  submit bank do
+    exerciseCmd loanCid' CloseLoan with
+      loanLimitCid = updatedLoanLimitCid
+
+
+  -- Verify that the loan contract is now archived 
+  loan <- queryContractId borrower loanCid'
+  assertMsg "Loan contract should be archived" (isNone loan)
 
   return ()
