@@ -13,7 +13,7 @@ template LoanWithDisbursement
     signatory borrower, bank
 
     -- Choice to disburse tokens to the borrower's account
-    nonconsuming choice Disburse : ContractId TokenAccount
+    nonconsuming choice Disburse : (ContractId LoanWithDisbursement, ContractId TokenAccount)
       with
         tokenAccountCid : ContractId TokenAccount
         disburseAmount : Decimal
@@ -24,7 +24,9 @@ template LoanWithDisbursement
         assertMsg "Cannot disburse more than approved loan amount" (newDisbursedAmount <= amount)
         
         -- Update the contract
-        create this with disbursedAmount = newDisbursedAmount
+        updatedLoanCid <- create this with disbursedAmount = newDisbursedAmount
 
         -- Credit tokens to the borrower's account
-        exercise tokenAccountCid Credit with amount = disburseAmount
+        updatedTokenAccountCid <- exercise tokenAccountCid Credit with amount = disburseAmount
+
+        return (updatedLoanCid, updatedTokenAccountCid)

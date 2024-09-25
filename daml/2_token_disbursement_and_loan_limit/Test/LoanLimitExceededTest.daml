@@ -1,0 +1,32 @@
+module Test.LoanLimitExceededTest where
+
+import Daml.Script
+import LoanRequestWithLoanLimit
+import LoanLimit
+
+testLoanLimitExceededWithReturn : Script ()
+testLoanLimitExceededWithReturn = script do
+    -- Allocate parties
+    borrower <- allocatePartyWithHint "Borrower" (PartyIdHint "borrower")
+    bank <- allocatePartyWithHint "Bank" (PartyIdHint "bank")
+
+    -- Create a LoanLimit contract with a lower limit
+    loanLimitCid <- submit bank do
+        createCmd LoanLimit with
+            bank = bank
+            totalLimit = 3000.0
+            usedAmount = 0.0
+
+    -- Borrower creates a LoanRequest with an amount that exceeds the loan limit
+    loanRequestCid <- submit borrower do
+        createCmd LoanRequestWithLoanLimit with
+            borrower = borrower
+            bank = bank
+            amount = 5000.0
+
+    -- Bank attempts to approve the LoanRequest, which should fail
+    submitMustFail bank do
+        exerciseCmd loanRequestCid ApproveRequest with
+            loanLimitCid = loanLimitCid
+
+    return ()

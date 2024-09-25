@@ -1,0 +1,55 @@
+module Test.LoanDisbursementTest where
+
+import Daml.Script
+import TokenAccount
+import LoanLimit
+import LoanRequestWithLoanLimit
+import LoanWithDisbursement
+
+testDisburseTokens : Script ()
+testDisburseTokens = script do
+    -- Allocate parties
+    borrower <- allocatePartyWithHint "Borrower" (PartyIdHint "borrower")
+    bank <- allocatePartyWithHint "Bank" (PartyIdHint "bank")
+
+    -- Create a TokenAccount for the borrower
+    tokenAccountCid <- submit borrower do
+        createCmd TokenAccount with
+            owner = borrower
+            issuer = bank
+            balance = 0.0
+
+    -- Create a LoanLimit contract
+    loanLimitCid <- submit bank do
+        createCmd LoanLimit with
+            bank = bank
+            totalLimit = 10000.0
+            usedAmount = 0.0
+
+    -- Borrower creates a LoanRequest
+    loanRequestCid <- submit borrower do
+        createCmd LoanRequestWithLoanLimit with
+            borrower = borrower
+            bank = bank
+            amount = 5000.0
+
+    -- Bank approves the LoanRequest, returns (loanCid, updatedLoanLimitCid)
+    (loanCid, updatedLoanLimitCid) <- submit bank do
+        exerciseCmd loanRequestCid ApproveRequest with
+            loanLimitCid = loanLimitCid
+
+    -- Disburse 2000 tokens to the borrower's account
+    (updatedLoanCid, newTokenAccountCid) <- submitMulti [borrower, bank] [] $
+        exerciseCmd loanCid Disburse with
+            tokenAccountCid = tokenAccountCid
+            disburseAmount = 2000.0
+
+    -- Verify that the TokenAccount balance is updated
+    Some tokenAccount <- queryContractId @TokenAccount borrower newTokenAccountCid
+    assertMsg "Token balance should be 2000" (tokenAccount.balance == 2000.0)
+
+    -- Verify that the Loan's disbursedAmount is updated
+    Some loanUpdated <- queryContractId @LoanWithDisbursement borrower updatedLoanCid
+    assertMsg "Disbursed amount should be 2000" (loanUpdated.disbursedAmount == 2000.0)
+
+    return ()
