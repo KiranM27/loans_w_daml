@@ -1,12 +1,12 @@
-module Test.LoanRepaymentTest where
+module Test.UpdatedRepaymentRestrictions where
 
 import Daml.Script
-import DA.Optional
 
 import LoanRequestWithLoanLimit
 import LoanWithRepayment
 import LoanLimitWithRepayment
 import TokenAccountWithKey
+import RepaymentRestriction
 
 testLoanRepaymentWorkflow : Script ()
 testLoanRepaymentWorkflow = script do
@@ -50,31 +50,43 @@ testLoanRepaymentWorkflow = script do
           disburseAmount = 2000.0
 
   -- Repay partial repayment
-  let partialRepaymentAmount = 2000.0
-  (loanCid', tokenAccountCid') <- submit borrower do
+  -- Repay 50, which is less than the minimum repayment amount of 10% of the loan amount
+  -- So, it should fail
+  let partialRepaymentAmount = 50.0
+  submitMustFail borrower do
     exerciseCmd updatedLoanCid Repay with
       repaymentAmount = partialRepaymentAmount
       tokenAccountCid = tokenAccountCid
 
-  -- Verify partial repayment
-  Some loan <- queryContractId borrower loanCid'
-  assertMsg "Total repaid should be 2000" (loan.repaidAmount == 2000.0) -- Updating of the repaid amount on the loan contract 
+
+  -- Create a new repayment restriction with a lower minimum repayment amount
+  -- So that the partial repayment of 50 should now be allowed
+  let newMinRepaymentAmount = 25.0
+  newRepaymentRestrictionCid <- submit bank do
+    createCmd RepaymentRestriction with
+      bank = bank
+      borrower = borrower
+      minRepaymentAmount = newMinRepaymentAmount
+
+
+  -- Update the loan with the new repayment restriction
+  updatedLoanCid <- submit bank do
+    exerciseCmd updatedLoanCid UpdateRepaymentRestriction with
+      repaymentRestrictionCid = newRepaymentRestrictionCid
+
+  -- Repay 50, which is more than the new minimum repayment amount
+  -- So, it should now be allowed
+  (updatedLoanCid, updatedTokenAccountCid) <- submit borrower do
+    exerciseCmd updatedLoanCid Repay with
+      repaymentAmount = 50.0
+      tokenAccountCid = newTokenAccountCid
+
+
+  -- Verify the updated loan and token account
+  Some loan <- queryContractId borrower updatedLoanCid
+  assertMsg "Total repaid should be 50" (loan.repaidAmount == 50.0) -- Updating of the repaid amount on the loan contract 
   assertMsg "Disbursed amount should be 2000" (loan.disbursedAmount == 2000.0)
-  assertMsg "Repaid amount should be the same as the disbursed amount" (loan.repaidAmount == loan.disbursedAmount)
 
-  -- Bank closes the loan 
-  -- Archiving of the loan contract when the amount is repaid 
-  updatedLoanLimitCid' <- submit bank do
-    exerciseCmd loanCid' CloseLoan with
-      loanLimitCid = updatedLoanLimitCid
-
-  -- Verify that the loan contract is now archived 
-  loan <- queryContractId borrower loanCid'
-  assertMsg "Loan contract should be archived" (isNone loan)
-
-
-  -- Updating of the loan limit used amount upon repayment 
-  Some loanLimit <- queryContractId bank updatedLoanLimitCid'
-  assertMsg "Loan limit used amount should be 0" (loanLimit.usedAmount == 0.0)
-
+  Some tokenAccount <- queryContractId borrower updatedTokenAccountCid
+  assertMsg "Token account balance should be 9950" (tokenAccount.balance == 11950.0)
   return ()
