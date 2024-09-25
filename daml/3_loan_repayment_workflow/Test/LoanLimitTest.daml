@@ -1,0 +1,52 @@
+module Test.LoanLimitTest where
+
+import Daml.Script
+import DA.Optional
+import LoanLimitWithRepayment
+
+
+testCreateLoanLimit : Script ()
+testCreateLoanLimit = script do
+    -- Allocate parties
+    bank <- allocatePartyWithHint "Bank" (PartyIdHint "bank")
+
+    -- Create a LoanLimit contract
+    loanLimitCid <- submit bank do
+        createCmd LoanLimitWithRepayment with
+            bank = bank
+            totalLimit = 10000.0
+            usedAmount = 0.0
+
+    -- Query the LoanLimit contract and verify its contents
+    Some loanLimit <- queryContractId @LoanLimitWithRepayment bank loanLimitCid
+    assertMsg "Bank should be correct" (loanLimit.bank == bank)
+    assertMsg "Total limit should be 10000" (loanLimit.totalLimit == 10000.0)
+    assertMsg "Used amount should be 0" (loanLimit.usedAmount == 0.0)
+
+    -- Update the used amount
+    updatedLoanLimitCid <- submit bank do
+        exerciseCmd loanLimitCid UpdateUsedAmount with amountToAdd = 5000.0
+
+    -- Query the updated LoanLimit contract and verify the changes
+    Some updatedLoanLimit <- queryContractId @LoanLimitWithRepayment bank updatedLoanLimitCid
+    assertMsg "Used amount should be 5000" (updatedLoanLimit.usedAmount == 5000.0)
+
+
+    -- Update the used amount
+    updatedLoanLimitCid <- submit bank do
+        exerciseCmd updatedLoanLimitCid UpdateUsedAmountReduce with amountToReduce = 2500.0
+
+    -- Query the updated LoanLimit contract and verify the changes
+    Some updatedLoanLimit <- queryContractId @LoanLimitWithRepayment bank updatedLoanLimitCid
+    assertMsg "Used amount should be 2500" (updatedLoanLimit.usedAmount == 2500.0)
+
+
+    -- Archive the LoanLimit contract
+    submit bank do
+        archiveCmd updatedLoanLimitCid
+
+    -- Verify that the LoanLimit contract is archived
+    loanLimit <- queryContractId @LoanLimitWithRepayment bank updatedLoanLimitCid
+    assertMsg "LoanLimit contract should be archived" (isNone loanLimit)
+
+    return ()

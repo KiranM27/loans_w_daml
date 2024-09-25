@@ -1,0 +1,56 @@
+module Test.LoanTest where
+
+import Daml.Script
+import DA.Optional
+
+import LoanRequestWithLoanLimit
+import LoanLimitWithRepayment
+import LoanWithRepayment
+
+test_loan_request : Script ()
+test_loan_request = script do
+    -- Allocate parties
+    bank <- allocateParty "Bank"
+    borrower <- allocateParty "Borrower"
+    
+    -- Create a LoanRequest contract
+    loanRequestCid <- submit borrower do
+        createCmd LoanRequestWithLoanLimit with
+            borrower = borrower
+            bank = bank
+            amount = 1000.0
+
+    -- Create a LoanLimit contract
+    loanLimitCid <- submit bank do
+        createCmd LoanLimitWithRepayment with
+            bank = bank
+            totalLimit = 10000.0
+            usedAmount = 0.0
+
+    -- Verify the contract was created
+    Some loanRequest <- queryContractId @LoanRequestWithLoanLimit bank loanRequestCid
+    assertMsg "Borrower should be correct" (loanRequest.borrower == borrower)
+    assertMsg "Bank should be correct" (loanRequest.bank == bank)
+    assertMsg "Amount should be 1000" (loanRequest.amount == 1000.0)
+
+
+    -- Approve the loan request
+    (loanCid, loanLimitCid) <- submitMulti [bank, borrower] [] $ do
+        exerciseCmd loanRequestCid ApproveRequest with
+            loanLimitCid = loanLimitCid
+
+    -- Verify the loan contract was created
+    Some loan <- queryContractId @LoanWithRepayment bank loanCid
+    
+
+    -- Archive the Loan
+    submitMulti [bank, borrower] [] $ do
+        archiveCmd loanCid
+
+    
+
+    -- Verify the contract was archived
+    loan <- queryContractId @LoanWithRepayment borrower loanCid
+    assertMsg "Loan contract should be archived" (isNone loan)
+
+    return ()
