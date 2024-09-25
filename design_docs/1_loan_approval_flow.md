@@ -40,6 +40,7 @@
    The `Loan` contract is created by the `ApproveRequest` choice exercised in the `LoanRequest` contract. This ensures a seamless transition from loan request approval to the establishment of a formal loan agreement between the two parties.
 
 
+
 ## Conclusion
 
 This design satisfies the loan approval flow by structuring two templates (`LoanRequest` and `Loan`) that handle the process from loan request initiation to formal loan creation. By separating the request phase and the loan agreement, the system ensures a clear flow and preserves roles for both the borrower and the bank throughout the process.

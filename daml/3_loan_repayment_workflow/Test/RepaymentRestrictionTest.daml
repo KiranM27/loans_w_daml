@@ -1,0 +1,38 @@
+module Test.RepaymentRestrictionTest where
+
+import Daml.Script
+import DA.Optional
+import RepaymentRestriction
+
+-- Test for creating and archiving RepaymentRestriction contract
+test_create_and_archive_repayment_restriction : Script ()
+test_create_and_archive_repayment_restriction = script do
+  -- Setup parties
+  bank <- allocateParty "Bank"
+  borrower <- allocateParty "Borrower"
+
+  -- Create RepaymentRestriction contract
+  let minRepaymentAmount = 100.0
+    
+
+  repaymentRestrictionCid <- submit bank do
+    createCmd RepaymentRestriction with
+      bank
+      borrower
+      minRepaymentAmount
+
+  -- Verify the contract was created
+  Some repaymentRestriction <- queryContractId bank repaymentRestrictionCid
+
+  -- Verify that the minimum repayment amount is set correctly
+  assertMsg "Minimum repayment amount should be set correctly" (minRepaymentAmount == repaymentRestriction.minRepaymentAmount)
+
+  -- Archive the RepaymentRestriction contract
+  submit bank do
+    archiveCmd repaymentRestrictionCid
+
+  -- Verify the contract was archived
+  repaymentRestrictions <- queryContractId @RepaymentRestriction bank repaymentRestrictionCid
+  assertMsg "RepaymentRestriction contract should be archived" (isNone repaymentRestrictions)
+
+  return ()
