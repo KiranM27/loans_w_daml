@@ -3,8 +3,10 @@ module LoanRequestWithLoanLimit where
 
 import LoanWithRepayment
 import LoanLimitWithRepayment
+import RepaymentRestriction
 
 template LoanRequestWithLoanLimit
+
   with
     borrower : Party
     bank : Party
@@ -29,6 +31,13 @@ template LoanRequestWithLoanLimit
         -- Update the LoanLimit used amount
         updatedLoanLimitCid <- exercise loanLimitCid UpdateUsedAmount with amountToAdd = amount
 
+        -- Create the RepaymentRestriction contract
+        -- The min amount to be repaid is 10% of the loan amount, can be changed as needed 
+        repaymentRestrictionCid <- create RepaymentRestriction with
+          bank = bank
+          borrower = borrower
+          minRepaymentAmount = amount * 0.1
+
         -- Create the Loan contract
         loanCid <- create LoanWithRepayment with
           borrower = borrower
@@ -36,5 +45,6 @@ template LoanRequestWithLoanLimit
           amount = amount
           disbursedAmount = 0.0
           repaidAmount = 0.0
+          repaymentRestrictionCid = repaymentRestrictionCid
 
         return (loanCid, updatedLoanLimitCid)

@@ -12,6 +12,7 @@ template LoanWithRepayment
     amount : Decimal
     disbursedAmount : Decimal
     repaidAmount : Decimal
+    repaymentRestrictionCid : ContractId RepaymentRestriction
   where
     signatory borrower, bank
 
@@ -37,7 +38,6 @@ template LoanWithRepayment
     -- Choice for the borrower to repay the loan
     choice Repay : (ContractId LoanWithRepayment, ContractId TokenAccountWithKey)
       with
-        repaymentRestrictionCid : ContractId RepaymentRestriction
         tokenAccountCid : ContractId TokenAccountWithKey
         repaymentAmount : Decimal
       controller borrower

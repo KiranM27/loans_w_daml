@@ -57,18 +57,10 @@ testLoanRepaymentWorkflow = script do
           tokenAccountCid = tokenAccountCid
           disburseAmount = 2000.0
 
-  -- Create a Payment Restriction - should be 10% of the loan amount 
-  paymentRestrictionCid <- submit bank do
-    createCmd RepaymentRestriction with
-      bank = bank
-      borrower = borrower
-      minRepaymentAmount = 500.0
-
   -- Repay partial repayment
   let partialRepaymentAmount = 2000.0
   (loanCid', tokenAccountCid') <- submit borrower do
     exerciseCmd updatedLoanCid Repay with
-      repaymentRestrictionCid = repaymentRestrictionCid
       repaymentAmount = partialRepaymentAmount
       tokenAccountCid = tokenAccountCid
 
