@@ -44,7 +44,7 @@ testLoanRepaymentWorkflow = script do
       loanLimitCid = loanLimitCid 
 
   -- Create TokenAccount for borrower
-  tokenAccountCid <- submit borrower do
+  tokenAccountCid <- submitMulti [borrower, bank] [] $ do
     createCmd TokenAccountWithKey with
       owner = borrower
       issuer = bank
