@@ -16,7 +16,7 @@ template LoanWithRepayment
     signatory borrower, bank
 
     -- Choice to disburse tokens to the borrower's account
-    nonconsuming choice Disburse : (ContractId LoanWithRepayment, ContractId TokenAccountWithKey)
+    choice Disburse : (ContractId LoanWithRepayment, ContractId TokenAccountWithKey)
       with
         tokenAccountCid : ContractId TokenAccountWithKey
         disburseAmount : Decimal
@@ -35,7 +35,7 @@ template LoanWithRepayment
         return (updatedLoanCid, updatedTokenAccountCid)
 
     -- Choice for the borrower to repay the loan
-    nonconsuming choice Repay : (ContractId LoanWithRepayment, ContractId TokenAccountWithKey)
+    choice Repay : (ContractId LoanWithRepayment, ContractId TokenAccountWithKey)
       with
         repaymentRestrictionCid : ContractId RepaymentRestriction
         tokenAccountCid : ContractId TokenAccountWithKey
