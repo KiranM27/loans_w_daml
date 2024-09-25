@@ -1,0 +1,39 @@
+module Test.TokenAccountTest where
+
+import Daml.Script
+import TokenAccount
+
+testTokenAccountDebitCredit : Script ()
+testTokenAccountDebitCredit = script do
+    -- Allocate parties
+    borrower <- allocatePartyWithHint "Borrower" (PartyIdHint "borrower")
+    bank <- allocatePartyWithHint "Bank" (PartyIdHint "bank")
+
+    -- Create a TokenAccount for the borrower
+    tokenAccountCid <- submit borrower do
+        createCmd TokenAccount with
+            owner = borrower
+            issuer = bank
+            balance = 1000.0
+
+    -- 1. Credit 500 tokens to the borrower's account
+    tokenAccountCidAfterCredit <- submit bank do
+        exerciseCmd tokenAccountCid Credit with amount = 500.0
+
+    -- Verify that the balance is updated to 1500
+    Some tokenAccountAfterCredit <- queryContractId @TokenAccount borrower tokenAccountCidAfterCredit
+    assertMsg "Balance after credit should be 1500" (tokenAccountAfterCredit.balance == 1500.0)
+
+    -- 2. Debit 400 tokens from the borrower's account
+    tokenAccountCidAfterDebit <- submit borrower do
+        exerciseCmd tokenAccountCidAfterCredit Debit with amount = 400.0
+
+    -- Verify that the balance is updated to 1100
+    Some tokenAccountAfterDebit <- queryContractId @TokenAccount borrower tokenAccountCidAfterDebit
+    assertMsg "Balance after debit should be 1100" (tokenAccountAfterDebit.balance == 1100.0)
+
+    -- 3. Attempt to debit more than available balance (should fail)
+    submitMustFail borrower do
+        exerciseCmd tokenAccountCid Debit with amount = 1200.0
+
+    return ()

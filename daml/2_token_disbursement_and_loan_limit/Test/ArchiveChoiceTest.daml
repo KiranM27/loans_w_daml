@@ -1,0 +1,88 @@
+module Test.ArchiveChoiceTest where
+
+import Daml.Script
+import DA.Optional
+import LoanWithDisbursement
+import LoanRequestWithLoanLimit
+import LoanLimit
+import TokenAccount
+
+testArchival : Script ()
+testArchival = script do
+    -- Allocate parties
+    borrower <- allocatePartyWithHint "Borrower" (PartyIdHint "borrower")
+    bank <- allocatePartyWithHint "Bank" (PartyIdHint "bank")
+
+    -- 1. Create LoanLimit contract
+    loanLimitCid <- submit bank do
+        createCmd LoanLimit with
+            bank = bank
+            totalLimit = 10000.0
+            usedAmount = 0.0
+
+    -- 2. Borrower creates a TokenAccount
+    tokenAccountCid <- submit borrower do
+        createCmd TokenAccount with
+            owner = borrower
+            issuer = bank
+            balance = 0.0
+
+    -- 3. Borrower creates a LoanRequest
+    loanRequestCid <- submit borrower do
+        createCmd LoanRequestWithLoanLimit with
+            borrower = borrower
+            bank = bank
+            amount = 5000.0
+
+    -- New step: Create another LoanRequest to be archived before approval
+    loanRequestToArchiveCid <- submit borrower do
+        createCmd LoanRequestWithLoanLimit with
+            borrower = borrower
+            bank = bank
+            amount = 3000.0
+
+    -- New step: Archive the LoanRequest before approval
+    submit borrower do
+        exerciseCmd loanRequestToArchiveCid Archive
+
+    -- 4. Bank approves the LoanRequest
+    (loanCid, updatedLoanLimitCid) <- submit bank do
+        exerciseCmd loanRequestCid ApproveRequest with
+            loanLimitCid = loanLimitCid
+
+    -- 5. Archive the LoanWithDisbursement contract
+    submitMulti [borrower, bank] [] $ do
+        exerciseCmd loanCid Archive
+
+    -- 6. Archive the LoanLimit contract
+    submit bank do
+        exerciseCmd updatedLoanLimitCid Archive
+
+    -- 7. Archive the TokenAccount contract
+    submit borrower do
+        exerciseCmd tokenAccountCid Archive
+
+
+    -- Verifying that all contracts are archived
+
+    -- Verify LoanWithDisbursement contract is archived
+    mLoanArchived <- queryContractId @LoanWithDisbursement borrower loanCid
+    assertMsg "LoanWithDisbursement should be archived" (isNone mLoanArchived)
+
+    -- Verify LoanLimit contract is archived
+    mLoanLimitArchived <- queryContractId @LoanLimit bank updatedLoanLimitCid
+    assertMsg "LoanLimit should be archived" (isNone mLoanLimitArchived)
+
+    -- Verify TokenAccount contract is archived
+    mTokenAccountArchived <- queryContractId @TokenAccount borrower tokenAccountCid
+    assertMsg "TokenAccount should be archived" (isNone mTokenAccountArchived)
+
+    -- Verify LoanRequest contract is archived
+    mLoanRequestArchived <- queryContractId @LoanRequestWithLoanLimit borrower loanRequestCid
+    assertMsg "LoanRequestWithLoanLimit should be archived" (isNone mLoanRequestArchived)
+
+    -- New verification: Verify the archived LoanRequest is indeed archived
+    mLoanRequestToArchiveArchived <- queryContractId @LoanRequestWithLoanLimit borrower loanRequestToArchiveCid
+    assertMsg "LoanRequestWithLoanLimit (to archive) should be archived" (isNone mLoanRequestToArchiveArchived)
+
+    return ()
