@@ -64,7 +64,7 @@ testLoanRepaymentWorkflow = script do
       borrower = borrower
       minRepaymentAmount = 500.0
 
-  -- Test partial repayment
+  -- Repay partial repayment
   let partialRepaymentAmount = 2000.0
   (loanCid', tokenAccountCid') <- submit borrower do
     exerciseCmd updatedLoanCid Repay with
@@ -74,19 +74,23 @@ testLoanRepaymentWorkflow = script do
 
   -- Verify partial repayment
   Some loan <- queryContractId borrower loanCid'
-  assertMsg "Total repaid should be 2000" (loan.repaidAmount == 2000.0)
+  assertMsg "Total repaid should be 2000" (loan.repaidAmount == 2000.0) -- Updating of the repaid amount on the loan contract 
   assertMsg "Disbursed amount should be 2000" (loan.disbursedAmount == 2000.0)
   assertMsg "Repaid amount should be the same as the disbursed amount" (loan.repaidAmount == loan.disbursedAmount)
 
-
   -- Bank closes the loan 
-  submit bank do
+  -- Archiving of the loan contract when the amount is repaid 
+  updatedLoanLimitCid' <- submit bank do
     exerciseCmd loanCid' CloseLoan with
       loanLimitCid = updatedLoanLimitCid
-
 
   -- Verify that the loan contract is now archived 
   loan <- queryContractId borrower loanCid'
   assertMsg "Loan contract should be archived" (isNone loan)
+
+
+  -- Updating of the loan limit used amount upon repayment 
+  Some loanLimit <- queryContractId bank updatedLoanLimitCid'
+  assertMsg "Loan limit used amount should be 0" (loanLimit.usedAmount == 0.0)
 
   return ()

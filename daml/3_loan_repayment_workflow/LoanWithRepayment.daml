@@ -66,7 +66,7 @@ template LoanWithRepayment
         return (updatedLoanCid, updatedTokenAccountCid)
 
     -- Choice for the bank to archive the Loan contract when fully repaid
-    choice CloseLoan : () 
+    choice CloseLoan : ContractId LoanLimitWithRepayment
       with
         loanLimitCid : ContractId LoanLimitWithRepayment
       controller bank
@@ -80,8 +80,5 @@ template LoanWithRepayment
         let newUsedAmount = loanLimit.usedAmount - amount
         assertMsg "Used amount cannot be negative" (newUsedAmount >= 0.0)
 
-        -- Update the LoanLimit contract
+        -- Update the LoanLimit contract and return the new ContractId
         exercise loanLimitCid UpdateUsedAmountReduce with amountToReduce = amount
-
-        -- Archive the Loan contract
-        return ()
