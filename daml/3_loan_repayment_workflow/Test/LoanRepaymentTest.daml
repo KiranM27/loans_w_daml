@@ -6,7 +6,7 @@ import DA.Optional
 import LoanRequestWithLoanLimit
 import LoanWithRepayment
 import LoanLimitWithRepayment
-import TokenAccountWithKey
+import TokenAccount
 
 testLoanRepaymentWorkflow : Script ()
 testLoanRepaymentWorkflow = script do
@@ -37,7 +37,7 @@ testLoanRepaymentWorkflow = script do
 
   -- Create TokenAccount for borrower
   tokenAccountCid <- submitMulti [borrower, bank] [] $ do
-    createCmd TokenAccountWithKey with
+    createCmd TokenAccount with
       owner = borrower
       issuer = bank
       balance = 10000.0  -- Ensure borrower has enough balance to repay
@@ -54,7 +54,7 @@ testLoanRepaymentWorkflow = script do
   (loanCid', tokenAccountCid') <- submit borrower do
     exerciseCmd updatedLoanCid Repay with
       repaymentAmount = partialRepaymentAmount
-      tokenAccountCid = tokenAccountCid
+      tokenAccountCid = newTokenAccountCid
 
   -- Verify partial repayment
   Some loan <- queryContractId borrower loanCid'

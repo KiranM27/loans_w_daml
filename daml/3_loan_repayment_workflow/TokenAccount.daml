@@ -1,6 +1,6 @@
-module TokenAccountWithKey where
+module TokenAccount where
 
-template TokenAccountWithKey
+template TokenAccount
   with
     owner : Party
     issuer : Party
@@ -9,7 +9,7 @@ template TokenAccountWithKey
     signatory owner, issuer
 
     -- Choice to credit tokens to the account
-    choice Credit : ContractId TokenAccountWithKey
+    choice Credit : ContractId TokenAccount
       with
         amount : Decimal
       controller issuer
@@ -18,7 +18,7 @@ template TokenAccountWithKey
         create this with balance = balance + amount
 
     -- Choice to debit tokens from the account
-    choice Debit : ContractId TokenAccountWithKey
+    choice Debit : ContractId TokenAccount
       with
         amount : Decimal
       controller owner

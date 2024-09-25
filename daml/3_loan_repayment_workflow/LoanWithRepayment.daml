@@ -2,7 +2,7 @@
 module LoanWithRepayment where
 
 import RepaymentRestriction
-import TokenAccountWithKey
+import TokenAccount
 import LoanLimitWithRepayment
 
 template LoanWithRepayment
@@ -17,9 +17,9 @@ template LoanWithRepayment
     signatory borrower, bank
 
     -- Choice to disburse tokens to the borrower's account
-    choice Disburse : (ContractId LoanWithRepayment, ContractId TokenAccountWithKey)
+    choice Disburse : (ContractId LoanWithRepayment, ContractId TokenAccount)
       with
-        tokenAccountCid : ContractId TokenAccountWithKey
+        tokenAccountCid : ContractId TokenAccount
         disburseAmount : Decimal
       controller borrower, bank
       do
@@ -36,9 +36,9 @@ template LoanWithRepayment
         return (updatedLoanCid, updatedTokenAccountCid)
 
     -- Choice for the borrower to repay the loan
-    choice Repay : (ContractId LoanWithRepayment, ContractId TokenAccountWithKey)
+    choice Repay : (ContractId LoanWithRepayment, ContractId TokenAccount)
       with
-        tokenAccountCid : ContractId TokenAccountWithKey
+        tokenAccountCid : ContractId TokenAccount
         repaymentAmount : Decimal
       controller borrower
       do
